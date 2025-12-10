@@ -1,0 +1,147 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: maven
+    image: maven:3.9-eclipse-temurin-17
+    command: ['cat']
+    tty: true
+    volumeMounts:
+    - name: maven-cache
+      mountPath: /root/.m2
+  - name: docker
+    image: docker:24-dind
+    command: ['dockerd-entrypoint.sh']
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command: ['cat']
+    tty: true
+  volumes:
+  - name: maven-cache
+    emptyDir: {}
+  - name: docker-sock
+    emptyDir: {}
+"""
+        }
+    }
+    
+    environment {
+        APP_NAME = 'java-app-1'
+        IMAGE_NAME = "${APP_NAME}:${BUILD_NUMBER}"
+        KUBERNETES_NAMESPACE = 'java-app-1'
+        DOCKER_REGISTRY = 'http://localhost:5000' // Set your Docker registry URL if needed
+    }
+    
+    stages {
+        // stage('Checkout') {
+        //     steps {
+        //         echo 'Checking out source code...'
+        //         checkout scm
+        //     }
+        // }
+        
+        stage('Build') {
+            container('maven') {
+                steps {
+                    echo 'Building Java application with Maven...'
+                    sh '''
+                        mvn clean package -DskipTests
+                    '''
+                }
+                post {
+                    success {
+                        archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                    }
+                }
+            }
+        }
+        
+        stage('Test') {
+            container('maven') {
+                steps {
+                    echo 'Running tests...'
+                    sh '''
+                        mvn test
+                    '''
+                }
+                post {
+                    always {
+                        junit 'target/surefire-reports/*.xml'
+                    }
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
+            container('docker') {
+                steps {
+                    echo "Building Docker image: ${IMAGE_NAME}"
+                    script {
+                        sh """
+                            docker build -t ${IMAGE_NAME} .
+                        """
+                        // If you have a Docker registry, uncomment and configure:
+                        // sh """
+                        //     docker tag ${IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                        //     docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                        // """
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            container('kubectl') {
+                steps {
+                    echo "Deploying ${APP_NAME} to Kubernetes namespace: ${KUBERNETES_NAMESPACE}"
+                    script {
+                        // Update deployment with new image
+                        sh """
+                            sed -i.bak 's|image: ${APP_NAME}:.*|image: ${IMAGE_NAME}|g' k8s/deployment.yaml
+                            kubectl apply -f k8s/deployment.yaml -n ${KUBERNETES_NAMESPACE}
+                            kubectl apply -f k8s/service.yaml -n ${KUBERNETES_NAMESPACE}
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            container('kubectl') {
+                steps {
+                    echo 'Verifying deployment...'
+                    script {
+                        sh """
+                            kubectl rollout status deployment/${APP_NAME} -n ${KUBERNETES_NAMESPACE} --timeout=300s
+                            kubectl get pods -l app=${APP_NAME} -n ${KUBERNETES_NAMESPACE}
+                            kubectl get svc ${APP_NAME}-service -n ${KUBERNETES_NAMESPACE}
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+            echo "Application deployed: ${APP_NAME}"
+            echo "Image: ${IMAGE_NAME}"
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
