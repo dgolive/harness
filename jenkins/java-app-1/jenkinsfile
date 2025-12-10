@@ -121,10 +121,10 @@ spec:
                                 docker build -t ${IMAGE_NAME} .
                             """
                             // If you have a Docker registry, uncomment and configure:
-                            // sh """
-                            //     docker tag ${IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}
-                            //     docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}
-                            // """
+                            sh """
+                                docker tag ${IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                                docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                            """
                         }
                     }
                 }
