@@ -38,7 +38,7 @@ spec:
         APP_NAME = 'java-app-1'
         IMAGE_NAME = "${APP_NAME}:${BUILD_NUMBER}"
         KUBERNETES_NAMESPACE = 'java-app-1'
-        DOCKER_REGISTRY = 'http://localhost:5000' // Set your Docker registry URL if needed
+        DOCKER_REGISTRY = 'localhost:5000' // Set your Docker registry URL if needed
     }
     
     stages {
