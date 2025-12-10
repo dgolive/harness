@@ -50,40 +50,40 @@ spec:
         // }
         
         stage('Build') {
-            container('maven') {
-                steps {
+            steps {
+                container('maven') {
                     echo 'Building Java application with Maven...'
                     sh '''
                         mvn clean package -DskipTests
                     '''
                 }
-                post {
-                    success {
-                        archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-                    }
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
                 }
             }
         }
         
         stage('Test') {
-            container('maven') {
-                steps {
+            steps {
+                container('maven') {
                     echo 'Running tests...'
                     sh '''
                         mvn test
                     '''
                 }
-                post {
-                    always {
-                        junit 'target/surefire-reports/*.xml'
-                    }
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
                 }
             }
         }
         
         stage('Build Docker Image') {
-            container('docker') {
-                steps {
+            steps {
+                container('docker') {
                     echo "Building Docker image: ${IMAGE_NAME}"
                     script {
                         sh """
@@ -100,8 +100,8 @@ spec:
         }
         
         stage('Deploy to Kubernetes') {
-            container('kubectl') {
-                steps {
+            steps {
+                container('kubectl') {
                     echo "Deploying ${APP_NAME} to Kubernetes namespace: ${KUBERNETES_NAMESPACE}"
                     script {
                         // Update deployment with new image
@@ -116,8 +116,8 @@ spec:
         }
         
         stage('Verify Deployment') {
-            container('kubectl') {
-                steps {
+            steps {
+                container('kubectl') {
                     echo 'Verifying deployment...'
                     script {
                         sh """
