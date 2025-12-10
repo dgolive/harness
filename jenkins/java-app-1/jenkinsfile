@@ -46,6 +46,10 @@ spec:
             steps {
                 echo 'Checking out source code...'
                 checkout scm
+                sh '''
+                    echo "Checkout completed in: $(pwd)"
+                    ls -la
+                '''
             }
         }
         
@@ -53,9 +57,33 @@ spec:
             steps {
                 container('maven') {
                     echo 'Building Java application with Maven...'
-                    sh '''
-                        mvn clean package -DskipTests
-                    '''
+                    script {
+                        sh '''
+                            echo "Current directory in maven container: $(pwd)"
+                            echo "Workspace contents:"
+                            ls -la
+                            echo "Environment variables:"
+                            env | grep -i workspace || true
+                            echo "Checking for pom.xml..."
+                            if [ -f pom.xml ]; then
+                                echo "✓ pom.xml found!"
+                            else
+                                echo "✗ pom.xml NOT found in current directory"
+                                echo "Trying to find workspace..."
+                                if [ -n "$WORKSPACE" ]; then
+                                    echo "WORKSPACE env var: $WORKSPACE"
+                                    cd "$WORKSPACE" || true
+                                    ls -la
+                                fi
+                                if [ ! -f pom.xml ]; then
+                                    echo "Searching for pom.xml in common locations..."
+                                    find /home/jenkins -name "pom.xml" -type f 2>/dev/null | head -5 || true
+                                    exit 1
+                                fi
+                            fi
+                            mvn clean package -DskipTests
+                        '''
+                    }
                 }
             }
             post {
