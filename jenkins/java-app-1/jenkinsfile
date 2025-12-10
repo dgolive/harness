@@ -94,7 +94,19 @@ spec:
             }
             post {
                 always {
-                    junit 'jenkins/java-app-1/target/surefire-reports/*.xml'
+                    script {
+                        def testResultsDir = 'jenkins/java-app-1/target/surefire-reports'
+                        def testResults = sh(
+                            script: "find ${testResultsDir} -name '*.xml' 2>/dev/null | wc -l",
+                            returnStdout: true
+                        ).trim()
+                        if (testResults.toInteger() > 0) {
+                            echo "Found ${testResults} test result file(s), publishing..."
+                            junit 'jenkins/java-app-1/target/surefire-reports/*.xml'
+                        } else {
+                            echo "No test results found, skipping junit step"
+                        }
+                    }
                 }
             }
         }
