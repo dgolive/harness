@@ -56,39 +56,27 @@ spec:
         stage('Build') {
             steps {
                 container('maven') {
-                    echo 'Building Java application with Maven...'
-                    script {
-                        sh '''
-                            echo "Current directory in maven container: $(pwd)"
-                            echo "Workspace contents:"
-                            ls -la
-                            echo "Environment variables:"
-                            env | grep -i workspace || true
-                            echo "Checking for pom.xml..."
-                            if [ -f pom.xml ]; then
-                                echo "✓ pom.xml found!"
-                            else
-                                echo "✗ pom.xml NOT found in current directory"
-                                echo "Trying to find workspace..."
-                                if [ -n "$WORKSPACE" ]; then
-                                    echo "WORKSPACE env var: $WORKSPACE"
-                                    cd "$WORKSPACE" || true
-                                    ls -la
-                                fi
+                    dir('jenkins/java-app-1') {
+                        echo 'Building Java application with Maven...'
+                        script {
+                            sh '''
+                                echo "Current directory: $(pwd)"
+                                echo "Checking for pom.xml..."
                                 if [ ! -f pom.xml ]; then
-                                    echo "Searching for pom.xml in common locations..."
-                                    find /home/jenkins -name "pom.xml" -type f 2>/dev/null | head -5 || true
+                                    echo "ERROR: pom.xml not found in jenkins/java-app-1"
+                                    ls -la
                                     exit 1
                                 fi
-                            fi
-                            mvn clean package -DskipTests
-                        '''
+                                echo "✓ pom.xml found, proceeding with build..."
+                                mvn clean package -DskipTests
+                            '''
+                        }
                     }
                 }
             }
             post {
                 success {
-                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                    archiveArtifacts artifacts: 'jenkins/java-app-1/target/*.jar', fingerprint: true
                 }
             }
         }
@@ -96,15 +84,17 @@ spec:
         stage('Test') {
             steps {
                 container('maven') {
-                    echo 'Running tests...'
-                    sh '''
-                        mvn test
-                    '''
+                    dir('jenkins/java-app-1') {
+                        echo 'Running tests...'
+                        sh '''
+                            mvn test
+                        '''
+                    }
                 }
             }
             post {
                 always {
-                    junit 'target/surefire-reports/*.xml'
+                    junit 'jenkins/java-app-1/target/surefire-reports/*.xml'
                 }
             }
         }
@@ -112,16 +102,18 @@ spec:
         stage('Build Docker Image') {
             steps {
                 container('docker') {
-                    echo "Building Docker image: ${IMAGE_NAME}"
-                    script {
-                        sh """
-                            docker build -t ${IMAGE_NAME} .
-                        """
-                        // If you have a Docker registry, uncomment and configure:
-                        // sh """
-                        //     docker tag ${IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}
-                        //     docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}
-                        // """
+                    dir('jenkins/java-app-1') {
+                        echo "Building Docker image: ${IMAGE_NAME}"
+                        script {
+                            sh """
+                                docker build -t ${IMAGE_NAME} .
+                            """
+                            // If you have a Docker registry, uncomment and configure:
+                            // sh """
+                            //     docker tag ${IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                            //     docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                            // """
+                        }
                     }
                 }
             }
@@ -130,14 +122,16 @@ spec:
         stage('Deploy to Kubernetes') {
             steps {
                 container('kubectl') {
-                    echo "Deploying ${APP_NAME} to Kubernetes namespace: ${KUBERNETES_NAMESPACE}"
-                    script {
-                        // Update deployment with new image
-                        sh """
-                            sed -i.bak 's|image: ${APP_NAME}:.*|image: ${IMAGE_NAME}|g' k8s/deployment.yaml
-                            kubectl apply -f k8s/deployment.yaml -n ${KUBERNETES_NAMESPACE}
-                            kubectl apply -f k8s/service.yaml -n ${KUBERNETES_NAMESPACE}
-                        """
+                    dir('jenkins/java-app-1') {
+                        echo "Deploying ${APP_NAME} to Kubernetes namespace: ${KUBERNETES_NAMESPACE}"
+                        script {
+                            // Update deployment with new image
+                            sh """
+                                sed -i.bak 's|image: ${APP_NAME}:.*|image: ${IMAGE_NAME}|g' k8s/deployment.yaml
+                                kubectl apply -f k8s/deployment.yaml -n ${KUBERNETES_NAMESPACE}
+                                kubectl apply -f k8s/service.yaml -n ${KUBERNETES_NAMESPACE}
+                            """
+                        }
                     }
                 }
             }
