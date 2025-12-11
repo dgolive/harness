@@ -1,37 +1,6 @@
 pipeline {
     agent {
-        kubernetes {
-            yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: maven
-    image: maven:3.9-eclipse-temurin-17
-    command: ['cat']
-    tty: true
-    volumeMounts:
-    - name: maven-cache
-      mountPath: /root/.m2
-  - name: docker
-    image: docker:24-dind
-    command: ['dockerd-entrypoint.sh']
-    securityContext:
-      privileged: true
-    volumeMounts:
-    - name: docker-sock
-      mountPath: /var/run
-  - name: kubectl
-    image: bitnami/kubectl:latest
-    command: ['cat']
-    tty: true
-  volumes:
-  - name: maven-cache
-    emptyDir: {}
-  - name: docker-sock
-    emptyDir: {}
-"""
-        }
+        label 'harness-1'
     }
     
     environment {
@@ -55,22 +24,20 @@ spec:
         
         stage('Build') {
             steps {
-                container('maven') {
-                    dir('jenkins/java-app-1') {
-                        echo 'Building Java application with Maven...'
-                        script {
-                            sh '''
-                                echo "Current directory: $(pwd)"
-                                echo "Checking for pom.xml..."
-                                if [ ! -f pom.xml ]; then
-                                    echo "ERROR: pom.xml not found in jenkins/java-app-1"
-                                    ls -la
-                                    exit 1
-                                fi
-                                echo "✓ pom.xml found, proceeding with build..."
-                                mvn clean package -DskipTests
-                            '''
-                        }
+                dir('jenkins/java-app-1') {
+                    echo 'Building Java application with Maven...'
+                    script {
+                        sh '''
+                            echo "Current directory: $(pwd)"
+                            echo "Checking for pom.xml..."
+                            if [ ! -f pom.xml ]; then
+                                echo "ERROR: pom.xml not found in jenkins/java-app-1"
+                                ls -la
+                                exit 1
+                            fi
+                            echo "✓ pom.xml found, proceeding with build..."
+                            mvn clean package -DskipTests
+                        '''
                     }
                 }
             }
@@ -83,13 +50,11 @@ spec:
         
         stage('Test') {
             steps {
-                container('maven') {
-                    dir('jenkins/java-app-1') {
-                        echo 'Running tests...'
-                        sh '''
-                            mvn test
-                        '''
-                    }
+                dir('jenkins/java-app-1') {
+                    echo 'Running tests...'
+                    sh '''
+                        mvn test
+                    '''
                 }
             }
             post {
@@ -113,19 +78,16 @@ spec:
         
         stage('Build Docker Image') {
             steps {
-                container('docker') {
-                    dir('jenkins/java-app-1') {
-                        echo "Building Docker image: ${IMAGE_NAME}"
-                        script {
-                            sh """
-                                docker build -t ${IMAGE_NAME} .
-                            """
-                            // If you have a Docker registry, uncomment and configure:
-                            sh """
-                                docker tag ${IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}
-                                docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}
-                            """
-                        }
+                dir('jenkins/java-app-1') {
+                    echo "Building Docker image: ${IMAGE_NAME}"
+                    script {
+                        sh """
+                            docker build -t ${IMAGE_NAME} .
+                        """
+                        sh """
+                            docker tag ${IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                        """
                     }
                 }
             }
@@ -133,17 +95,15 @@ spec:
         
         stage('Deploy to Kubernetes') {
             steps {
-                container('kubectl') {
-                    dir('jenkins/java-app-1') {
-                        echo "Deploying ${APP_NAME} to Kubernetes namespace: ${KUBERNETES_NAMESPACE}"
-                        script {
-                            // Update deployment with new image
-                            sh """
-                                sed -i.bak 's|image: ${APP_NAME}:.*|image: ${IMAGE_NAME}|g' k8s/deployment.yaml
-                                kubectl apply -f k8s/deployment.yaml -n ${KUBERNETES_NAMESPACE}
-                                kubectl apply -f k8s/service.yaml -n ${KUBERNETES_NAMESPACE}
-                            """
-                        }
+                dir('jenkins/java-app-1') {
+                    echo "Deploying ${APP_NAME} to Kubernetes namespace: ${KUBERNETES_NAMESPACE}"
+                    script {
+                        // Update deployment with new image
+                        sh """
+                            sed -i.bak 's|image: ${APP_NAME}:.*|image: ${DOCKER_REGISTRY}/${IMAGE_NAME}|g' k8s/deployment.yaml
+                            kubectl apply -f k8s/deployment.yaml -n ${KUBERNETES_NAMESPACE}
+                            kubectl apply -f k8s/service.yaml -n ${KUBERNETES_NAMESPACE}
+                        """
                     }
                 }
             }
@@ -151,15 +111,13 @@ spec:
         
         stage('Verify Deployment') {
             steps {
-                container('kubectl') {
-                    echo 'Verifying deployment...'
-                    script {
-                        sh """
-                            kubectl rollout status deployment/${APP_NAME} -n ${KUBERNETES_NAMESPACE} --timeout=300s
-                            kubectl get pods -l app=${APP_NAME} -n ${KUBERNETES_NAMESPACE}
-                            kubectl get svc ${APP_NAME}-service -n ${KUBERNETES_NAMESPACE}
-                        """
-                    }
+                echo 'Verifying deployment...'
+                script {
+                    sh """
+                        kubectl rollout status deployment/${APP_NAME} -n ${KUBERNETES_NAMESPACE} --timeout=300s
+                        kubectl get pods -l app=${APP_NAME} -n ${KUBERNETES_NAMESPACE}
+                        kubectl get svc ${APP_NAME}-service -n ${KUBERNETES_NAMESPACE}
+                    """
                 }
             }
         }
