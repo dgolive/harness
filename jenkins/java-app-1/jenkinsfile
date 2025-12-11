@@ -8,6 +8,14 @@ pipeline {
         IMAGE_NAME = "${APP_NAME}:${BUILD_NUMBER}"
         KUBERNETES_NAMESPACE = 'java-app-1'
         DOCKER_REGISTRY = 'localhost:5000' // Set your Docker registry URL if needed
+        // Uncomment and configure if Java 17 is configured as a Jenkins tool:
+        // JAVA_HOME = tool 'JDK-17'
+    }
+    
+    tools {
+        // Uncomment if Java 17 is configured in Jenkins Global Tool Configuration:
+        // jdk 'JDK-17'  // Replace 'JDK-17' with your actual Java 17 tool name
+        // maven 'Maven-3.9'  // Optional: if Maven is configured as a tool
     }
     
     stages {
@@ -35,7 +43,48 @@ pipeline {
                                 ls -la
                                 exit 1
                             fi
-                            echo "✓ pom.xml found, proceeding with build..."
+                            echo "✓ pom.xml found"
+                            
+                            # Check Java version
+                            echo "Checking Java version..."
+                            java -version 2>&1 || echo "Java not found in PATH"
+                            
+                            # Try to find Java 17 or higher
+                            if [ -n "$JAVA_HOME" ]; then
+                                echo "Using JAVA_HOME: $JAVA_HOME"
+                                export PATH="$JAVA_HOME/bin:$PATH"
+                            fi
+                            
+                            # Check for Java 17+ in common locations
+                            JAVA_17_PATHS=(
+                                "/usr/lib/jvm/java-17-openjdk"
+                                "/usr/lib/jvm/java-17"
+                                "/opt/java/jdk-17"
+                                "/usr/java/jdk-17"
+                            )
+                            
+                            for java_path in "${JAVA_17_PATHS[@]}"; do
+                                if [ -d "$java_path" ] && [ -f "$java_path/bin/javac" ]; then
+                                    echo "Found Java 17 at: $java_path"
+                                    export JAVA_HOME="$java_path"
+                                    export PATH="$JAVA_HOME/bin:$PATH"
+                                    break
+                                fi
+                            done
+                            
+                            # Verify Java version
+                            JAVA_VERSION=$(java -version 2>&1 | head -n 1)
+                            echo "Java version: $JAVA_VERSION"
+                            
+                            # Check if Java 17+ is available
+                            JAVA_MAJOR=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d'.' -f1)
+                            if [ -z "$JAVA_MAJOR" ] || [ "$JAVA_MAJOR" -lt 17 ]; then
+                                echo "ERROR: Java 17 or higher is required. Found Java version: $JAVA_MAJOR"
+                                echo "Please install Java 17+ on the Jenkins node or configure JAVA_HOME"
+                                exit 1
+                            fi
+                            
+                            echo "✓ Java 17+ detected, proceeding with build..."
                             mvn clean package -DskipTests
                         '''
                     }
@@ -52,9 +101,15 @@ pipeline {
             steps {
                 dir('jenkins/java-app-1') {
                     echo 'Running tests...'
-                    sh '''
-                        mvn test
-                    '''
+                    script {
+                        sh '''
+                            # Ensure Java 17+ is used
+                            if [ -n "$JAVA_HOME" ]; then
+                                export PATH="$JAVA_HOME/bin:$PATH"
+                            fi
+                            mvn test
+                        '''
+                    }
                 }
             }
             post {
