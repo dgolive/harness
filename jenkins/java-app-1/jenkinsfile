@@ -12,12 +12,6 @@ pipeline {
         // JAVA_HOME = tool 'JDK-17'
     }
     
-    tools {
-        // Uncomment if Java 17 is configured in Jenkins Global Tool Configuration:
-        // jdk 'JDK-17'  // Replace 'JDK-17' with your actual Java 17 tool name
-        // maven 'Maven-3.9'  // Optional: if Maven is configured as a tool
-    }
-    
     stages {
         stage('Checkout') {
             steps {
