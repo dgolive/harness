@@ -9,7 +9,7 @@ pipeline {
         KUBERNETES_NAMESPACE = 'java-app-1'
         DOCKER_REGISTRY = 'localhost:5000' // Set your Docker registry URL if needed
         // Uncomment and configure if Java 17 is configured as a Jenkins tool:
-        // JAVA_HOME = tool 'JDK-17'
+        JAVA_HOME = tool 'JDK-17'
     }
     
     stages {
