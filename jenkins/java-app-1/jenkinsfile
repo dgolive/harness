@@ -39,22 +39,43 @@ pipeline {
                             fi
                             echo "✓ pom.xml found"
                             
-                            # Check Java version
+                            # Check Java version and set JAVA_HOME
                             echo "Checking Java version..."
                             
-                            # Set JAVA_HOME if not already set and tool is available
-                            if [ -z "$JAVA_HOME" ] || [ "$JAVA_HOME" = "" ]; then
-                                # Try to find Java from PATH
-                                JAVA_PATH=$(which java 2>/dev/null)
-                                if [ -n "$JAVA_PATH" ]; then
-                                    JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))
-                                    export JAVA_HOME
-                                    echo "Detected JAVA_HOME from PATH: $JAVA_HOME"
-                                fi
-                            else
-                                echo "Using JAVA_HOME: $JAVA_HOME"
-                                export PATH="$JAVA_HOME/bin:$PATH"
+                            # Find Java executable
+                            JAVA_PATH=$(which java 2>/dev/null || readlink -f $(which java 2>/dev/null) || echo "")
+                            
+                            if [ -z "$JAVA_PATH" ]; then
+                                echo "ERROR: Java not found in PATH"
+                                exit 1
                             fi
+                            
+                            # Determine JAVA_HOME from java executable path
+                            # Handle both /usr/bin/java -> /usr/lib/jvm/java-21-openjdk-amd64/bin/java and direct paths
+                            if [ -L "$JAVA_PATH" ]; then
+                                JAVA_PATH=$(readlink -f "$JAVA_PATH")
+                            fi
+                            
+                            # Extract JAVA_HOME (go up two levels from bin/java)
+                            JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))
+                            
+                            # Verify JAVA_HOME is valid
+                            if [ ! -d "$JAVA_HOME" ] || [ ! -f "$JAVA_HOME/bin/javac" ]; then
+                                echo "WARNING: Could not determine valid JAVA_HOME from $JAVA_PATH"
+                                # Try common locations
+                                for jhome in "/usr/lib/jvm/java-21-openjdk-amd64" "/usr/lib/jvm/java-21" "/usr/lib/jvm/java-17-openjdk-amd64" "/usr/lib/jvm/java-17"; do
+                                    if [ -d "$jhome" ] && [ -f "$jhome/bin/javac" ]; then
+                                        JAVA_HOME="$jhome"
+                                        break
+                                    fi
+                                done
+                            fi
+                            
+                            # Export JAVA_HOME and update PATH
+                            export JAVA_HOME
+                            export PATH="$JAVA_HOME/bin:$PATH"
+                            
+                            echo "JAVA_HOME set to: $JAVA_HOME"
                             
                             # Verify Java version
                             JAVA_VERSION=$(java -version 2>&1 | head -n 1)
@@ -73,7 +94,13 @@ pipeline {
                                 exit 1
                             fi
                             
-                            echo "✓ Java $JAVA_MAJOR detected (17+ required), proceeding with build..."
+                            echo "✓ Java $JAVA_MAJOR detected (17+ required)"
+                            
+                            # Verify Maven will use the correct Java
+                            echo "Verifying Maven Java configuration..."
+                            mvn -version
+                            
+                            echo "Proceeding with build..."
                             mvn clean package -DskipTests
                         '''
                     }
@@ -92,8 +119,18 @@ pipeline {
                     echo 'Running tests...'
                     script {
                         sh '''
-                            # Ensure Java is available
-                            if [ -n "$JAVA_HOME" ] && [ "$JAVA_HOME" != "" ]; then
+                            # Set JAVA_HOME if not already set
+                            if [ -z "$JAVA_HOME" ] || [ "$JAVA_HOME" = "" ]; then
+                                JAVA_PATH=$(which java 2>/dev/null || readlink -f $(which java 2>/dev/null) || echo "")
+                                if [ -n "$JAVA_PATH" ]; then
+                                    if [ -L "$JAVA_PATH" ]; then
+                                        JAVA_PATH=$(readlink -f "$JAVA_PATH")
+                                    fi
+                                    JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))
+                                    export JAVA_HOME
+                                    export PATH="$JAVA_HOME/bin:$PATH"
+                                fi
+                            else
                                 export PATH="$JAVA_HOME/bin:$PATH"
                             fi
                             mvn test
