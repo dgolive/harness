@@ -9,7 +9,7 @@ pipeline {
         KUBERNETES_NAMESPACE = 'java-app-1'
         DOCKER_REGISTRY = 'localhost:5000' // Set your Docker registry URL if needed
         // Uncomment and configure if Java 17 is configured as a Jenkins tool:
-        JAVA_HOME = tool 'JDK-17'
+        // JAVA_HOME = tool 'JDK-17'
     }
     
     stages {
@@ -41,30 +41,20 @@ pipeline {
                             
                             # Check Java version
                             echo "Checking Java version..."
-                            java -version 2>&1 || echo "Java not found in PATH"
                             
-                            # Try to find Java 17 or higher
-                            if [ -n "$JAVA_HOME" ]; then
+                            # Set JAVA_HOME if not already set and tool is available
+                            if [ -z "$JAVA_HOME" ] || [ "$JAVA_HOME" = "" ]; then
+                                # Try to find Java from PATH
+                                JAVA_PATH=$(which java 2>/dev/null)
+                                if [ -n "$JAVA_PATH" ]; then
+                                    JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))
+                                    export JAVA_HOME
+                                    echo "Detected JAVA_HOME from PATH: $JAVA_HOME"
+                                fi
+                            else
                                 echo "Using JAVA_HOME: $JAVA_HOME"
                                 export PATH="$JAVA_HOME/bin:$PATH"
                             fi
-                            
-                            # Check for Java 17+ in common locations
-                            JAVA_17_PATHS=(
-                                "/usr/lib/jvm/java-17-openjdk"
-                                "/usr/lib/jvm/java-17"
-                                "/opt/java/jdk-17"
-                                "/usr/java/jdk-17"
-                            )
-                            
-                            for java_path in "${JAVA_17_PATHS[@]}"; do
-                                if [ -d "$java_path" ] && [ -f "$java_path/bin/javac" ]; then
-                                    echo "Found Java 17 at: $java_path"
-                                    export JAVA_HOME="$java_path"
-                                    export PATH="$JAVA_HOME/bin:$PATH"
-                                    break
-                                fi
-                            done
                             
                             # Verify Java version
                             JAVA_VERSION=$(java -version 2>&1 | head -n 1)
@@ -72,13 +62,18 @@ pipeline {
                             
                             # Check if Java 17+ is available
                             JAVA_MAJOR=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d'.' -f1)
-                            if [ -z "$JAVA_MAJOR" ] || [ "$JAVA_MAJOR" -lt 17 ]; then
+                            if [ -z "$JAVA_MAJOR" ]; then
+                                echo "ERROR: Could not determine Java version"
+                                exit 1
+                            fi
+                            
+                            if [ "$JAVA_MAJOR" -lt 17 ]; then
                                 echo "ERROR: Java 17 or higher is required. Found Java version: $JAVA_MAJOR"
                                 echo "Please install Java 17+ on the Jenkins node or configure JAVA_HOME"
                                 exit 1
                             fi
                             
-                            echo "✓ Java 17+ detected, proceeding with build..."
+                            echo "✓ Java $JAVA_MAJOR detected (17+ required), proceeding with build..."
                             mvn clean package -DskipTests
                         '''
                     }
@@ -97,8 +92,8 @@ pipeline {
                     echo 'Running tests...'
                     script {
                         sh '''
-                            # Ensure Java 17+ is used
-                            if [ -n "$JAVA_HOME" ]; then
+                            # Ensure Java is available
+                            if [ -n "$JAVA_HOME" ] && [ "$JAVA_HOME" != "" ]; then
                                 export PATH="$JAVA_HOME/bin:$PATH"
                             fi
                             mvn test
