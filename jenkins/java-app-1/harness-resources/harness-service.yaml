@@ -12,7 +12,7 @@ service:
               store:
                 type: Github
                 spec:
-                  connectorRef: harnessgitconnector
+                  connectorRef: hngcharness
                   gitFetchType: Branch
                   paths:
                     - java-app-1/java-app-1-deployment.yaml
