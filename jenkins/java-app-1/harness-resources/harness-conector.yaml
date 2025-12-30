@@ -1,0 +1,25 @@
+connector:
+  name: hn-gc-harness
+  identifier: hngcharness
+  description: ""
+  accountIdentifier: 5D4YA46ATFKlABz76xj-Uw
+  orgIdentifier: default
+  projectIdentifier: harnesstest1
+  type: Github
+  spec:
+    url: https://github.com/dgolive/harness.git
+    authentication:
+      type: Http
+      spec:
+        type: UsernameToken
+        spec:
+          username: dgolive
+          tokenRef: harness_gitpat
+    apiAccess:
+      type: Token
+      spec:
+        tokenRef: harness_gitpat
+    executeOnDelegate: false
+    proxy: false
+    ignoreTestConnection: false
+    type: Repo
