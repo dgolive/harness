@@ -1,0 +1,5 @@
+service:
+  name: java-service
+  identifier: javaservice
+  orgIdentifier: default
+  projectIdentifier: harnesstest1
