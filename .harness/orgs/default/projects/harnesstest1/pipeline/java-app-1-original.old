@@ -1,0 +1,445 @@
+# this is the original pipeline from the jenkins migration
+pipeline:
+  name: java-app-1
+  identifier: javaapp1_TzBEkY2Q
+  projectIdentifier: harnesstest1
+  orgIdentifier: default
+  variables:
+    - name: APP_NAME
+      type: String
+      value: java-app-1
+    - name: IMAGE_NAME
+      type: String
+      value: ${APP_NAME}:${BUILD_NUMBER}
+    - name: KUBERNETES_NAMESPACE
+      type: String
+      value: java-app-1
+    - name: DOCKER_REGISTRY
+      type: String
+      value: localhost:5000
+  properties:
+    ci:
+      codebase:
+        connectorRef: <+input>
+        build:
+          type: branch
+          spec:
+            branch: <+input>
+  stages:
+    - stage:
+        identifier: checkout
+        name: Checkout
+        type: CI
+        spec:
+          cloneCodebase: true
+          runtime:
+            type: Cloud
+            spec: {}
+          platform:
+            os: Linux
+            arch: Amd64
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Echo Checkout Message
+                  identifier: echo_checkout_message
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      echo "Source code checkout is starting"
+                  timeout: 10m
+              - step:
+                  type: Run
+                  name: List Directory Contents
+                  identifier: list_directory_contents
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      echo "Current directory path:"
+                      pwd
+                      echo "\nListing all files and directories:"
+                      ls -la
+                  timeout: 10m
+            rollbackSteps: []
+    - stage:
+        identifier: build
+        name: Build
+        type: CI
+        spec:
+          cloneCodebase: false
+          runtime:
+            type: Cloud
+            spec: {}
+          platform:
+            os: Linux
+            arch: Amd64
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Echo Build Message
+                  identifier: echo_build_message
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      echo "Building Java application with Maven..."
+                  timeout: 10m
+              - step:
+                  type: Run
+                  name: Maven Build Script
+                  identifier: maven_build_script
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      echo "Current directory: $(pwd)"
+                      echo "Checking for pom.xml..."
+                      if [ ! -f pom.xml ]; then
+                          echo "ERROR: pom.xml not found in jenkins/java-app-1"
+                          ls -la
+                          exit 1
+                      fi
+                      echo "✓ pom.xml found"
+
+                      # Check Java version and set JAVA_HOME
+                      echo "Checking Java version..."
+
+                      # Find Java executable
+                      JAVA_PATH=$(which java 2>/dev/null || readlink -f $(which java 2>/dev/null) || echo "")
+
+                      if [ -z "$JAVA_PATH" ]; then
+                          echo "ERROR: Java not found in PATH"
+                          exit 1
+                      fi
+
+                      # Determine JAVA_HOME from java executable path
+                      if [ -L "$JAVA_PATH" ]; then
+                          JAVA_PATH=$(readlink -f "$JAVA_PATH")
+                      fi
+
+                      # Extract JAVA_HOME (go up two levels from bin/java)
+                      JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))
+
+                      # Verify JAVA_HOME is valid
+                      if [ ! -d "$JAVA_HOME" ] || [ ! -f "$JAVA_HOME/bin/javac" ]; then
+                          echo "WARNING: Could not determine valid JAVA_HOME from $JAVA_PATH"
+                          # Try common locations
+                          for jhome in "/usr/lib/jvm/java-21-openjdk-amd64" "/usr/lib/jvm/java-21" "/usr/lib/jvm/java-17-openjdk-amd64" "/usr/lib/jvm/java-17"; do
+                              if [ -d "$jhome" ] && [ -f "$jhome/bin/javac" ]; then
+                                  JAVA_HOME="$jhome"
+                                  break
+                              fi
+                          done
+                      fi
+
+                      # Export JAVA_HOME and update PATH
+                      export JAVA_HOME
+                      export PATH="$JAVA_HOME/bin:$PATH"
+
+                      echo "JAVA_HOME set to: $JAVA_HOME"
+
+                      # Verify Java version
+                      JAVA_VERSION=$(java -version 2>&1 | head -n 1)
+                      echo "Java version: $JAVA_VERSION"
+
+                      # Check if Java 17+ is available
+                      JAVA_MAJOR=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d'.' -f1)
+                      if [ -z "$JAVA_MAJOR" ]; then
+                          echo "ERROR: Could not determine Java version"
+                          exit 1
+                      fi
+
+                      if [ "$JAVA_MAJOR" -lt 17 ]; then
+                          echo "ERROR: Java 17 or higher is required. Found Java version: $JAVA_MAJOR"
+                          echo "Please install Java 17+ on the Jenkins node or configure JAVA_HOME"
+                          exit 1
+                      fi
+
+                      echo "✓ Java $JAVA_MAJOR detected (17+ required)"
+
+                      # Verify Maven will use the correct Java
+                      echo "Verifying Maven Java configuration..."
+                      mvn -version
+
+                      echo "Proceeding with build..."
+                      mvn clean package -DskipTests
+                  timeout: 10m
+              - step:
+                  type: Run
+                  name: Archive Artifacts
+                  identifier: archive_artifacts
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      mkdir -p artifacts
+                      cp jenkins/java-app-1/target/*.jar artifacts/
+                      ls -la artifacts/
+                    envVariables: {}
+                  timeout: 10m
+                  when:
+                    stageStatus: Success
+            rollbackSteps: []
+    - stage:
+        identifier: test
+        name: Test
+        type: CI
+        spec:
+          cloneCodebase: false
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Echo Test Message
+                  identifier: echo_test_message
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      echo 'Running tests...'
+                  timeout: 10m
+              - step:
+                  type: Run
+                  name: Run Maven Tests
+                  identifier: run_maven_tests
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      # Set JAVA_HOME if not already set
+                      if [ -z "$JAVA_HOME" ] || [ "$JAVA_HOME" = "" ]; then
+                          JAVA_PATH=$(which java 2>/dev/null || readlink -f $(which java 2>/dev/null) || echo "")
+                          if [ -n "$JAVA_PATH" ]; then
+                              if [ -L "$JAVA_PATH" ]; then
+                                  JAVA_PATH=$(readlink -f "$JAVA_PATH")
+                              fi
+                              JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))
+                              export JAVA_HOME
+                              export PATH="$JAVA_HOME/bin:$PATH"
+                          fi
+                      else
+                          export PATH="$JAVA_HOME/bin:$PATH"
+                      fi
+
+                      cd jenkins/java-app-1
+                      mvn test
+                  timeout: 10m
+              - step:
+                  type: Run
+                  name: Publish Test Results
+                  identifier: publish_test_results
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      # Check for test result files in the specified directory
+                      TEST_RESULTS_DIR="jenkins/java-app-1/target/surefire-reports"
+                      TEST_RESULTS_COUNT=$(find ${TEST_RESULTS_DIR} -name "*.xml" 2>/dev/null | wc -l)
+
+                      if [ "$TEST_RESULTS_COUNT" -gt 0 ]; then
+                        echo "Found $TEST_RESULTS_COUNT test result file(s), publishing..."
+                        export FOUND_TEST_RESULTS="true"
+                      else
+                        echo "No test results found, skipping JUnit publishing"
+                        export FOUND_TEST_RESULTS="false"
+                      fi
+                    envVariables:
+                      TEST_RESULTS_DIR: jenkins/java-app-1/target/surefire-reports
+                    outputVariables:
+                      - name: FOUND_TEST_RESULTS
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - jenkins/java-app-1/target/surefire-reports/*.xml
+                  timeout: 10m
+            rollbackSteps: []
+    - stage:
+        identifier: build_docker_image
+        name: Build Docker Image
+        type: CI
+        spec:
+          cloneCodebase: false
+          runtime:
+            type: Cloud
+            spec: {}
+          platform:
+            os: Linux
+            arch: Amd64
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Echo Docker build
+                  identifier: echo_docker_build
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      echo "Building Docker image: ${IMAGE_NAME}"
+                    envVariables:
+                      IMAGE_NAME: <+pipeline.variables.IMAGE_NAME>
+                  timeout: 10m
+              - step:
+                  type: Run
+                  name: Build Docker Image
+                  identifier: build_docker_image
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      cd jenkins/java-app-1
+                      docker build -t ${IMAGE_NAME} .
+                    envVariables:
+                      IMAGE_NAME: <+pipeline.variables.IMAGE_NAME>
+                  timeout: 10m
+              - step:
+                  type: Run
+                  name: Push Docker Image
+                  identifier: push_docker_image
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: alpine
+                    shell: Bash
+                    command: |
+                      cd jenkins/java-app-1
+                      docker tag ${IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                      docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}
+                    envVariables:
+                      DOCKER_REGISTRY: <+pipeline.variables.DOCKER_REGISTRY>
+                      IMAGE_NAME: <+pipeline.variables.IMAGE_NAME>
+                  timeout: 10m
+            rollbackSteps: []
+    - stage:
+        name: Deploy to Kubernetes
+        identifier: deploy_to_kubernetes
+        type: Deployment
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: <+input>
+          environment:
+            environmentRef: <+input>
+            deployToAll: false
+            infrastructureDefinitions: <+input>
+          execution:
+            steps:
+              - step:
+                  identifier: echo_deployment_message
+                  name: Echo Deployment Message
+                  type: ShellScript
+                  spec:
+                    shell: Bash
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "Deploying ${APP_NAME} to Kubernetes namespace: ${KUBERNETES_NAMESPACE}"
+                    environmentVariables:
+                      - name: APP_NAME
+                        type: String
+                        value: <+pipeline.variables.APP_NAME>
+                      - name: KUBERNETES_NAMESPACE
+                        type: String
+                        value: <+pipeline.variables.KUBERNETES_NAMESPACE>
+                  timeout: 10m
+              - step:
+                  identifier: apply_kubernetes_manifests
+                  name: Apply Kubernetes Manifests
+                  type: K8sApply
+                  spec:
+                    filePaths:
+                      - k8s/deployment.yaml
+                      - k8s/service.yaml
+                    overrides: []
+                    skipDryRun: false
+                    skipRendering: false
+                    skipSteadyStateCheck: false
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  identifier: k8s_rolling_rollback
+                  name: K8s Rolling Rollback
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec:
+                    pruningEnabled: false
+                    delegateSelectors: <+input>
+    - stage:
+        name: Verify Deployment
+        identifier: verify_deployment
+        type: Deployment
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: <+input>
+          environment:
+            environmentRef: <+input>
+            deployToAll: false
+            infrastructureDefinitions: <+input>
+          execution:
+            steps:
+              - step:
+                  identifier: echo_verification
+                  name: Echo Verification
+                  type: ShellScript
+                  timeout: 10m
+                  spec:
+                    shell: Bash
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "Verifying deployment..."
+              - step:
+                  identifier: kubectl_verification
+                  name: kubectl_verification
+                  type: ShellScript
+                  timeout: 10m
+                  spec:
+                    shell: Bash
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          kubectl rollout status deployment/<+pipeline.variables.APP_NAME> -n <+pipeline.variables.KUBERNETES_NAMESPACE> --timeout=300s
+                          kubectl get pods -l app=<+pipeline.variables.APP_NAME> -n <+pipeline.variables.KUBERNETES_NAMESPACE>
+                          kubectl get svc <+pipeline.variables.APP_NAME>-service -n <+pipeline.variables.KUBERNETES_NAMESPACE>
+            rollbackSteps: []
+  description: This pipeline was generated by Harness AI on 2025-12-19 13:10:41 UTC by Danilo Oliveira.
+  tags:
+    ai_generated: "true"
+    jenkins_migrated: "true"
+    migrated_using: jenkins-plugin-AI-harness
