@@ -372,21 +372,14 @@ pipeline:
               action:
                 type: StageRollback
         spec:
-          infrastructure:
-            type: KubernetesDirect
-            spec:
-              connectorRef: harnessk8sconnector
-              namespace: harness-runners
-              automountServiceAccountToken: true
-              nodeSelector: {}
-              os: Linux
           deploymentType: Kubernetes
           service:
             serviceRef: javaservice
           environment:
             environmentRef: Env_1
             deployToAll: false
-            infrastructureDefinitions: Infra_1
+            infrastructureDefinitions:
+              - identifier: Infra_1
           execution:
             steps:
               - step:
@@ -429,7 +422,8 @@ pipeline:
                   timeout: 10m
                   spec:
                     pruningEnabled: false
-                    delegateSelectors: helm-delegate
+                    delegateSelectors:
+                      - helm-delegate
     - stage:
         name: Verify Deployment
         identifier: verify_deployment
@@ -441,14 +435,6 @@ pipeline:
               action:
                 type: StageRollback
         spec:
-          infrastructure:
-            type: KubernetesDirect
-            spec:
-              connectorRef: harnessk8sconnector
-              namespace: harness-runners
-              automountServiceAccountToken: true
-              nodeSelector: {}
-              os: Linux
           cloneCodebase: false
           platform:
             os: Linux
@@ -462,7 +448,8 @@ pipeline:
           environment:
             environmentRef: Env_1
             deployToAll: false
-            infrastructureDefinitions: Infra_1
+            infrastructureDefinitions:
+              - identifier: Infra_1
           execution:
             steps:
               - step:
