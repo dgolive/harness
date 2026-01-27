@@ -262,7 +262,7 @@ pipeline:
                   identifier: build_docker_image
                   spec:
                     connectorRef: harnessk8sconnector
-                    image: docker:24.0.6-alpine
+                    image: alpine
                     shell: Sh
                     command: |
                       cd jenkins/java-app-1
@@ -276,7 +276,7 @@ pipeline:
                   identifier: push_docker_image
                   spec:
                     connectorRef: harnessk8sconnector
-                    image: docker:24.0.6-alpine
+                    image: alpine
                     shell: Sh
                     command: |
                       cd jenkins/java-app-1
