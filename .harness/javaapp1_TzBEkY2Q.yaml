@@ -372,6 +372,14 @@ pipeline:
               action:
                 type: StageRollback
         spec:
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: harnessk8sconnector
+              namespace: harness-runners
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
           deploymentType: Kubernetes
           service:
             serviceRef: javaservice
@@ -433,6 +441,14 @@ pipeline:
               action:
                 type: StageRollback
         spec:
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: harnessk8sconnector
+              namespace: harness-runners
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
           deploymentType: Kubernetes
           service:
             serviceRef: javaservice
