@@ -449,6 +449,13 @@ pipeline:
               automountServiceAccountToken: true
               nodeSelector: {}
               os: Linux
+          cloneCodebase: false
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
           deploymentType: Kubernetes
           service:
             serviceRef: javaservice
