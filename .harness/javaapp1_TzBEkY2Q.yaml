@@ -116,6 +116,7 @@ pipeline:
                     shell: Sh
                     command: |
                       echo "Current directory: $(pwd)"
+                      cd jenkins/java-app-1
                       echo "Checking for pom.xml..."
                       if [ ! -f pom.xml ]; then
                           echo "ERROR: pom.xml not found in jenkins/java-app-1"
