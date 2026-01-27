@@ -19,7 +19,7 @@ pipeline:
   properties:
     ci:
       codebase:
-        connectorRef: harnessgitconnector
+        connectorRef: hngcharness
         build:
           type: branch
           spec:
