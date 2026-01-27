@@ -38,7 +38,7 @@ pipeline:
               automountServiceAccountToken: true
               nodeSelector: {}
               os: Linux
-          cloneCodebase: false
+          cloneCodebase: true
           platform:
             os: Linux
             arch: Amd64
@@ -86,7 +86,7 @@ pipeline:
               automountServiceAccountToken: true
               nodeSelector: {}
               os: Linux
-          cloneCodebase: false
+          cloneCodebase: true
           platform:
             os: Linux
             arch: Amd64
@@ -112,11 +112,11 @@ pipeline:
                   identifier: maven_build_script
                   spec:
                     connectorRef: harnessk8sconnector
-                    image: alpine
+                    image: maven:3.9-eclipse-temurin-17-alpine
                     shell: Sh
                     command: |
                       echo "Current directory: $(pwd)"
-                      cd /harness/jenkins/java-app-1
+                      cd jenkins/java-app-1
                       echo "Checking for pom.xml..."
                       if [ ! -f pom.xml ]; then
                           echo "ERROR: pom.xml not found in jenkins/java-app-1"
@@ -124,67 +124,7 @@ pipeline:
                           exit 1
                       fi
                       echo "✓ pom.xml found"
-
-                      # Check Java version and set JAVA_HOME
-                      echo "Checking Java version..."
-
-                      # Find Java executable
-                      JAVA_PATH=$(which java 2>/dev/null || readlink -f $(which java 2>/dev/null) || echo "")
-
-                      if [ -z "$JAVA_PATH" ]; then
-                          echo "ERROR: Java not found in PATH"
-                          exit 1
-                      fi
-
-                      # Determine JAVA_HOME from java executable path
-                      if [ -L "$JAVA_PATH" ]; then
-                          JAVA_PATH=$(readlink -f "$JAVA_PATH")
-                      fi
-
-                      # Extract JAVA_HOME (go up two levels from bin/java)
-                      JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))
-
-                      # Verify JAVA_HOME is valid
-                      if [ ! -d "$JAVA_HOME" ] || [ ! -f "$JAVA_HOME/bin/javac" ]; then
-                          echo "WARNING: Could not determine valid JAVA_HOME from $JAVA_PATH"
-                          # Try common locations
-                          for jhome in "/usr/lib/jvm/java-21-openjdk-amd64" "/usr/lib/jvm/java-21" "/usr/lib/jvm/java-17-openjdk-amd64" "/usr/lib/jvm/java-17"; do
-                              if [ -d "$jhome" ] && [ -f "$jhome/bin/javac" ]; then
-                                  JAVA_HOME="$jhome"
-                                  break
-                              fi
-                          done
-                      fi
-
-                      # Export JAVA_HOME and update PATH
-                      export JAVA_HOME
-                      export PATH="$JAVA_HOME/bin:$PATH"
-
-                      echo "JAVA_HOME set to: $JAVA_HOME"
-
-                      # Verify Java version
-                      JAVA_VERSION=$(java -version 2>&1 | head -n 1)
-                      echo "Java version: $JAVA_VERSION"
-
-                      # Check if Java 17+ is available
-                      JAVA_MAJOR=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d'.' -f1)
-                      if [ -z "$JAVA_MAJOR" ]; then
-                          echo "ERROR: Could not determine Java version"
-                          exit 1
-                      fi
-
-                      if [ "$JAVA_MAJOR" -lt 17 ]; then
-                          echo "ERROR: Java 17 or higher is required. Found Java version: $JAVA_MAJOR"
-                          echo "Please install Java 17+ on the Jenkins node or configure JAVA_HOME"
-                          exit 1
-                      fi
-
-                      echo "✓ Java $JAVA_MAJOR detected (17+ required)"
-
-                      # Verify Maven will use the correct Java
-                      echo "Verifying Maven Java configuration..."
-                      mvn -version
-
+                      
                       echo "Proceeding with build..."
                       mvn clean package -DskipTests
                   timeout: 10m
@@ -218,7 +158,7 @@ pipeline:
               automountServiceAccountToken: true
               nodeSelector: {}
               os: Linux
-          cloneCodebase: false
+          cloneCodebase: true
           platform:
             os: Linux
             arch: Amd64
@@ -244,24 +184,9 @@ pipeline:
                   identifier: run_maven_tests
                   spec:
                     connectorRef: harnessk8sconnector
-                    image: alpine
+                    image: maven:3.9-eclipse-temurin-17-alpine
                     shell: Sh
                     command: |
-                      # Set JAVA_HOME if not already set
-                      if [ -z "$JAVA_HOME" ] || [ "$JAVA_HOME" = "" ]; then
-                          JAVA_PATH=$(which java 2>/dev/null || readlink -f $(which java 2>/dev/null) || echo "")
-                          if [ -n "$JAVA_PATH" ]; then
-                              if [ -L "$JAVA_PATH" ]; then
-                                  JAVA_PATH=$(readlink -f "$JAVA_PATH")
-                              fi
-                              JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))
-                              export JAVA_HOME
-                              export PATH="$JAVA_HOME/bin:$PATH"
-                          fi
-                      else
-                          export PATH="$JAVA_HOME/bin:$PATH"
-                      fi
-
                       cd jenkins/java-app-1
                       mvn test
                   timeout: 10m
@@ -277,7 +202,7 @@ pipeline:
                       # Check for test result files in the specified directory
                       TEST_RESULTS_DIR="jenkins/java-app-1/target/surefire-reports"
                       TEST_RESULTS_COUNT=$(find ${TEST_RESULTS_DIR} -name "*.xml" 2>/dev/null | wc -l)
-
+                      
                       if [ "$TEST_RESULTS_COUNT" -gt 0 ]; then
                         echo "Found $TEST_RESULTS_COUNT test result file(s), publishing..."
                         export FOUND_TEST_RESULTS="true"
@@ -309,7 +234,7 @@ pipeline:
               automountServiceAccountToken: true
               nodeSelector: {}
               os: Linux
-          cloneCodebase: false
+          cloneCodebase: true
           platform:
             os: Linux
             arch: Amd64
@@ -337,7 +262,7 @@ pipeline:
                   identifier: build_docker_image
                   spec:
                     connectorRef: harnessk8sconnector
-                    image: alpine
+                    image: docker:24.0.6-alpine
                     shell: Sh
                     command: |
                       cd jenkins/java-app-1
@@ -351,7 +276,7 @@ pipeline:
                   identifier: push_docker_image
                   spec:
                     connectorRef: harnessk8sconnector
-                    image: alpine
+                    image: docker:24.0.6-alpine
                     shell: Sh
                     command: |
                       cd jenkins/java-app-1
@@ -408,8 +333,8 @@ pipeline:
                   type: K8sApply
                   spec:
                     filePaths:
-                      - k8s/deployment.yaml
-                      - k8s/service.yaml
+                      - jenkins/java-app-1/k8s/deployment.yaml
+                      - jenkins/java-app-1/k8s/service.yaml
                     overrides: []
                     skipDryRun: false
                     skipRendering: false
