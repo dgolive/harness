@@ -257,34 +257,16 @@ pipeline:
                       IMAGE_NAME: <+pipeline.variables.IMAGE_NAME>
                   timeout: 10m
               - step:
-                  type: Run
-                  name: Build Docker Image
-                  identifier: build_docker_image
+                  type: BuildAndPushDockerRegistry
+                  name: Build and Push Docker Image
+                  identifier: build_and_push_docker_image
                   spec:
                     connectorRef: harnessk8sconnector
-                    image: docker:latest
-                    shell: Sh
-                    command: |
-                      cd jenkins/java-app-1
-                      docker build -t ${IMAGE_NAME} .
-                    envVariables:
-                      IMAGE_NAME: <+pipeline.variables.IMAGE_NAME>
-                  timeout: 10m
-              - step:
-                  type: Run
-                  name: Push Docker Image
-                  identifier: push_docker_image
-                  spec:
-                    connectorRef: harnessk8sconnector
-                    image: docker:latest
-                    shell: Sh
-                    command: |
-                      cd jenkins/java-app-1
-                      docker tag ${IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}
-                      docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}
-                    envVariables:
-                      DOCKER_REGISTRY: <+pipeline.variables.DOCKER_REGISTRY>
-                      IMAGE_NAME: <+pipeline.variables.IMAGE_NAME>
+                    repo: <+pipeline.variables.APP_NAME>
+                    tags:
+                      - <+pipeline.variables.BUILD_NUMBER>
+                    dockerfile: jenkins/java-app-1/Dockerfile
+                    buildContext: jenkins/java-app-1
                   timeout: 10m
             rollbackSteps: []
     - stage:

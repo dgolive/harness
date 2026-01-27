@@ -12,6 +12,6 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Updated CI stage images:
     - Maven build/test: `maven:3.9-eclipse-temurin-17-alpine` (includes Java 17).
-    - Docker build/push: `docker:latest` (fixed `ImagePullBackOff` from invalid `docker:24.0.6-alpine` tag).
+    - Docker build/push: Replaced manual `docker build/push` steps with the native Harness `BuildAndPushDockerRegistry` step. This resolves the `unix:///var/run/docker.sock` connection error by using a daemonless builder (like Kaniko) instead of requiring a local Docker daemon.
 - Refactored `maven_build_script` to remove manual Java installation logic, leveraging the new Maven image.
 
