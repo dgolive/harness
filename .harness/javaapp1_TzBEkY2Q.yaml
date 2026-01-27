@@ -19,11 +19,11 @@ pipeline:
   properties:
     ci:
       codebase:
-        connectorRef: <+input>
+        connectorRef: hngcharness
         build:
           type: branch
           spec:
-            branch: <+input>
+            branch: main
   stages:
     - stage:
         identifier: checkout
@@ -374,11 +374,11 @@ pipeline:
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: <+input>
+            serviceRef: javaservice
           environment:
-            environmentRef: <+input>
+            environmentRef: Env_1
             deployToAll: false
-            infrastructureDefinitions: <+input>
+            infrastructureDefinitions: Infra_1
           execution:
             steps:
               - step:
@@ -421,7 +421,7 @@ pipeline:
                   timeout: 10m
                   spec:
                     pruningEnabled: false
-                    delegateSelectors: <+input>
+                    delegateSelectors: helm-delegate
     - stage:
         name: Verify Deployment
         identifier: verify_deployment
@@ -435,11 +435,11 @@ pipeline:
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: <+input>
+            serviceRef: javaservice
           environment:
-            environmentRef: <+input>
+            environmentRef: Env_1
             deployToAll: false
-            infrastructureDefinitions: <+input>
+            infrastructureDefinitions: Infra_1
           execution:
             steps:
               - step:
