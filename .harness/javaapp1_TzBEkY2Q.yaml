@@ -261,7 +261,7 @@ pipeline:
                   name: Build and Push Docker Image
                   identifier: build_and_push_docker_image
                   spec:
-                    connectorRef: harnessk8sconnector
+                    connectorRef: localdockerreg
                     repo: <+pipeline.variables.APP_NAME>
                     tags:
                       - <+pipeline.variables.BUILD_NUMBER>
