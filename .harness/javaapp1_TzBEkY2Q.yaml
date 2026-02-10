@@ -263,10 +263,6 @@ pipeline:
                     buildContext: jenkins/java-app-1
                   timeout: 10m
             rollbackSteps: []
-          runtime:
-            type: Docker
-            spec:
-              harnessImageConnectorRef: JFrog_Docker_Registry
         description: ""
     - stage:
         name: Deploy to Kubernetes
