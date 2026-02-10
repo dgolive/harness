@@ -28,10 +28,15 @@ connector:
   projectIdentifier: harnesstest1
   type: DockerRegistry
   spec:
-    dockerRegistryUrl: http://localhost:5000
+    dockerRegistryUrl: localhost:5000
     providerType: Other
     auth:
-      type: Anonymous
-    executeOnDelegate: false
+      type: UsernamePassword
+      spec:
+        username: ubuntu
+        passwordRef: localdockerregistrysecret1
+    executeOnDelegate: true
+    delegateSelectors:
+      - helm-delegate
     proxy: false
     ignoreTestConnection: false
