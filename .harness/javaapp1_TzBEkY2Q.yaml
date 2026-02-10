@@ -124,7 +124,7 @@ pipeline:
                           exit 1
                       fi
                       echo "✓ pom.xml found"
-                      
+
                       echo "Proceeding with build..."
                       mvn clean package -DskipTests
                   timeout: 10m
@@ -202,7 +202,7 @@ pipeline:
                       # Check for test result files in the specified directory
                       TEST_RESULTS_DIR="jenkins/java-app-1/target/surefire-reports"
                       TEST_RESULTS_COUNT=$(find ${TEST_RESULTS_DIR} -name "*.xml" 2>/dev/null | wc -l)
-                      
+
                       if [ "$TEST_RESULTS_COUNT" -gt 0 ]; then
                         echo "Found $TEST_RESULTS_COUNT test result file(s), publishing..."
                         export FOUND_TEST_RESULTS="true"
@@ -262,11 +262,10 @@ pipeline:
                   identifier: build_and_push_docker_image
                   spec:
                     connectorRef: ArtifactorySaaS
-                    repo: <+pipeline.variables.APP_NAME>
+                    repo: https://trial5d3qns.jfrog.io/artifactory/api/docker/harness-vrepo
                     tags:
                       - <+pipeline.variables.BUILD_NUMBER>
                     dockerfile: jenkins/java-app-1/Dockerfile
-                    buildContext: jenkins/java-app-1
                   timeout: 10m
             rollbackSteps: []
     - stage:
