@@ -258,11 +258,12 @@ pipeline:
                   name: Build and Push Docker Image
                   identifier: build_and_push_docker_image
                   spec:
-                    connectorRef: ArtifactorySaaS
-                    repo: trial5d3qns.jfrog.io/harness-vrepo
+                    connectorRef: jfrog_docker_registry
+                    repo: trial5d3qns.jfrog.io/harness-vrepo/<+pipeline.variables.APP_NAME>
                     tags:
-                      - <+pipeline.variables.BUILD_NUMBER>
+                      - <+pipeline.sequenceId>
                     dockerfile: jenkins/java-app-1/Dockerfile
+                    buildContext: jenkins/java-app-1
                   timeout: 10m
             rollbackSteps: []
     - stage:

@@ -40,3 +40,27 @@ connector:
       - helm-delegate
     proxy: false
     ignoreTestConnection: false
+---
+# Docker Registry connector for JFrog Artifactory (required for BuildAndPushDockerRegistry).
+# Artifactory connector type cannot be used for Build and Push; use this Docker Registry connector instead.
+connector:
+  name: JFrog Docker Registry
+  identifier: jfrog_docker_registry
+  description: Docker Registry connector for JFrog Artifactory (trial5d3qns.jfrog.io). Use this with BuildAndPushDockerRegistry step.
+  accountIdentifier: 5D4YA46ATFKlABz76xj-Uw
+  orgIdentifier: default
+  projectIdentifier: harnesstest1
+  type: DockerRegistry
+  spec:
+    dockerRegistryUrl: https://trial5d3qns.jfrog.io
+    providerType: Other
+    auth:
+      type: UsernamePassword
+      spec:
+        username: <YOUR_JFROG_USERNAME>
+        passwordRef: <YOUR_JFROG_PASSWORD_OR_API_KEY_SECRET_ID>
+    executeOnDelegate: true
+    delegateSelectors:
+      - helm-delegate
+    proxy: false
+    ignoreTestConnection: false
