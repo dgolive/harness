@@ -226,14 +226,6 @@ pipeline:
         name: Build Docker Image
         type: CI
         spec:
-          infrastructure:
-            type: KubernetesDirect
-            spec:
-              connectorRef: harnessk8sconnector
-              namespace: harness-runners
-              automountServiceAccountToken: true
-              nodeSelector: {}
-              os: Linux
           cloneCodebase: true
           platform:
             os: Linux
@@ -266,6 +258,11 @@ pipeline:
                     buildContext: jenkins/java-app-1
                   timeout: 10m
             rollbackSteps: []
+          runtime:
+            type: Docker
+            spec:
+              harnessImageConnectorRef: JFrog_Docker_Registry
+        description: ""
     - stage:
         name: Deploy to Kubernetes
         identifier: deploy_to_kubernetes
