@@ -225,11 +225,14 @@ pipeline:
         identifier: build_docker_image
         name: Build Docker Image
         type: CI
-        delegateSelectors:
-          - _docker_delegate
+          - 
         spec:
           cloneCodebase: true
           platform:
+          infrastructure:
+            type: Docker
+            spec:
+              connectorRef: _docker_delegate
             os: Linux
             arch: Amd64
           runtime:
