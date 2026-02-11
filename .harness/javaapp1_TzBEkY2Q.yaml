@@ -221,20 +221,25 @@ pipeline:
                           - jenkins/java-app-1/target/surefire-reports/*.xml
                   timeout: 10m
             rollbackSteps: []
-    # To run this stage on a specific Docker delegate, add tag _docker_delegate to that delegate, then uncomment below:
-    # delegateSelectors:
-    #   - _docker_delegate
     - stage:
         identifier: build_docker_image
         name: Build Docker Image
         type: CI
         spec:
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: harnessk8sconnector
+              namespace: harness-runners
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
           cloneCodebase: true
           platform:
             os: Linux
             arch: Amd64
           runtime:
-            type: Docker
+            type: Cloud
             spec: {}
           execution:
             steps:
@@ -243,7 +248,7 @@ pipeline:
                   name: Echo Docker build
                   identifier: echo_docker_build
                   spec:
-                    connectorRef: account.harnessImage
+                    connectorRef: harnessk8sconnector
                     image: alpine
                     shell: Sh
                     command: |
