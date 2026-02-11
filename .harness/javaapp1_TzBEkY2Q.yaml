@@ -225,14 +225,9 @@ pipeline:
         identifier: build_docker_image
         name: Build Docker Image
         type: CI
-          - 
         spec:
           cloneCodebase: true
           platform:
-          infrastructure:
-            type: Docker
-            spec:
-              connectorRef: _docker_delegate
             os: Linux
             arch: Amd64
           runtime:
