@@ -265,7 +265,7 @@ pipeline:
                   name: Build and Push to Artifactory
                   identifier: build_and_push_docker_image
                   spec:
-                    connectorRef: <+pipeline.variables.JFROG_DOCKER_REGISTRY>
+                    connectorRef: JFrog_Docker_Registry
                     repo: trial5d3qns.jfrog.io/harness-vrepo/<+pipeline.variables.APP_NAME>
                     tags:
                       - <+pipeline.sequenceId>
