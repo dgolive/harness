@@ -225,8 +225,13 @@ pipeline:
         identifier: build_docker_image
         name: Build Docker Image
         type: CI
+        delegateSelectors:
+          - _docker_delegate
         spec:
           cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
           runtime:
             type: Docker
             spec: {}
@@ -237,20 +242,18 @@ pipeline:
                   name: Echo Docker build
                   identifier: echo_docker_build
                   spec:
-                    connectorRef: harnessk8sconnector
+                    connectorRef: account.harnessImage
                     image: alpine
                     shell: Sh
                     command: |
-                      echo "Building Docker image: ${IMAGE_NAME}"
-                    envVariables:
-                      IMAGE_NAME: <+pipeline.variables.IMAGE_NAME>
+                      echo "Building Docker image for Artifactory: <+pipeline.variables.APP_NAME>:<+pipeline.sequenceId>"
                   timeout: 10m
               - step:
                   type: BuildAndPushDockerRegistry
-                  name: Build and Push Docker Image
+                  name: Build and Push to Artifactory
                   identifier: build_and_push_docker_image
                   spec:
-                    connectorRef: JFrog_Docker_Registry
+                    connectorRef: jfrog_docker_registry
                     repo: trial5d3qns.jfrog.io/harness-vrepo/<+pipeline.variables.APP_NAME>
                     tags:
                       - <+pipeline.sequenceId>
@@ -258,7 +261,6 @@ pipeline:
                     buildContext: jenkins/java-app-1
                   timeout: 10m
             rollbackSteps: []
-        description: ""
     - stage:
         name: Deploy to Kubernetes
         identifier: deploy_to_kubernetes
