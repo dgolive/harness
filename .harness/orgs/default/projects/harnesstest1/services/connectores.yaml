@@ -45,8 +45,8 @@ connector:
 # Artifactory connector type cannot be used for Build and Push; use this Docker Registry connector instead.
 connector:
   name: JFrog Docker Registry
-  identifier: jfrog_docker_registry
-  description: Docker Registry connector for JFrog Artifactory (trial5d3qns.jfrog.io). Use this with BuildAndPushDockerRegistry step.
+  identifier: JFrog_Docker_Registry
+  description: ""
   accountIdentifier: 5D4YA46ATFKlABz76xj-Uw
   orgIdentifier: default
   projectIdentifier: harnesstest1
@@ -57,10 +57,11 @@ connector:
     auth:
       type: UsernamePassword
       spec:
-        username: <YOUR_JFROG_USERNAME>
-        passwordRef: <YOUR_JFROG_PASSWORD_OR_API_KEY_SECRET_ID>
+        username: danilo.oliveira@dev.pro
+        passwordRef: artifactorysaas
     executeOnDelegate: true
     delegateSelectors:
       - helm-delegate
     proxy: false
     ignoreTestConnection: false
+
