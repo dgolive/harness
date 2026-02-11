@@ -15,7 +15,7 @@ pipeline:
       value: java-app-1
     - name: DOCKER_REGISTRY
       type: String
-      value: trial5d3qns.jfrog.
+      value: trial5d3qns.jfrog.io
     - name: JFROG_USERNAME
       type: String
       value: danilo.oliveira@dev.pro
