@@ -221,12 +221,13 @@ pipeline:
                           - jenkins/java-app-1/target/surefire-reports/*.xml
                   timeout: 10m
             rollbackSteps: []
+    # To run this stage on a specific Docker delegate, add tag _docker_delegate to that delegate, then uncomment below:
+    # delegateSelectors:
+    #   - _docker_delegate
     - stage:
         identifier: build_docker_image
         name: Build Docker Image
         type: CI
-        delegateSelectors:
-          - _docker_delegate
         spec:
           cloneCodebase: true
           platform:
