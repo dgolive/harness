@@ -59,9 +59,7 @@ connector:
       spec:
         username: danilo.oliveira@dev.pro
         passwordRef: artifactorysaas
-    executeOnDelegate: true
-    delegateSelectors:
-      - helm-delegate
+    executeOnDelegate: false
     proxy: false
     ignoreTestConnection: false
 
