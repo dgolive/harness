@@ -1,0 +1,13 @@
+infrastructureDefinition:
+  name: K8sInfra
+  identifier: K8sInfra
+  orgIdentifier: default
+  projectIdentifier: harnesstest1
+  environmentRef: k0sharness
+  deploymentType: Kubernetes
+  type: KubernetesDirect
+  spec:
+    connectorRef: harnessk8sconnector
+    namespace: java-app-1
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
