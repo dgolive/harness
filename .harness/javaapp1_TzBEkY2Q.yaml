@@ -276,6 +276,7 @@ pipeline:
                 type: StageRollback
         spec:
           deploymentType: Kubernetes
+          cloneCodebase: true
           service:
             serviceRef: k8s_harnessservice
           environment:
