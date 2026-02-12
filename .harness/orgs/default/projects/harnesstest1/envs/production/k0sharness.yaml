@@ -1,0 +1,6 @@
+environment:
+  name: k0s-harness
+  identifier: k0sharness
+  orgIdentifier: default
+  projectIdentifier: harnesstest1
+  type: Production
