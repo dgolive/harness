@@ -3,3 +3,6 @@ service:
   identifier: k8s_harnessservice
   orgIdentifier: default
   projectIdentifier: harnesstest1
+  serviceDefinition:
+    spec: {}
+    type: Kubernetes
