@@ -277,7 +277,7 @@ pipeline:
         spec:
           deploymentType: Kubernetes
           service:
-            serviceRef: javaservice
+            serviceRef: k8s_harnessservice
           environment:
             environmentRef: Env_1
             deployToAll: false
