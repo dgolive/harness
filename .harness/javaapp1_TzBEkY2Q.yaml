@@ -282,7 +282,7 @@ pipeline:
             environmentRef: k0sharness
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: K8sEnv
+              - identifier: K8sInfra
           execution:
             steps:
               - step:
