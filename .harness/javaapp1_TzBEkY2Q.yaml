@@ -13,15 +13,6 @@ pipeline:
     - name: KUBERNETES_NAMESPACE
       type: String
       value: java-app-1
-    - name: DOCKER_REGISTRY
-      type: String
-      value: trial5d3qns.jfrog.io
-    - name: JFROG_USERNAME
-      type: String
-      value: danilo.oliveira@dev.pro
-    - name: JFROG_PASSWORD
-      type: String
-      value: artifactorysaas
   properties:
     ci:
       codebase:
@@ -265,8 +256,8 @@ pipeline:
                   name: Build and Push to Artifactory
                   identifier: build_and_push_docker_image
                   spec:
-                    connectorRef: ArtifactorySaaS
-                    repo: trial5d3qns.jfrog.io/harness-vrepo/<+pipeline.variables.APP_NAME>
+                    connectorRef: JFrog_Docker_Registry
+                    repo: trial5d3qns.jfrog.io/harness-vrepo/java-app-1
                     tags:
                       - <+pipeline.sequenceId>
                     dockerfile: jenkins/java-app-1/Dockerfile
