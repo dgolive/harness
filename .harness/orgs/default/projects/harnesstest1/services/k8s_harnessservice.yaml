@@ -1,0 +1,5 @@
+service:
+  name: k8s_harnessservice
+  identifier: k8s_harnessservice
+  orgIdentifier: default
+  projectIdentifier: harnesstest1
