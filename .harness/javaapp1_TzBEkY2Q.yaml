@@ -279,10 +279,10 @@ pipeline:
           service:
             serviceRef: k8s_harnessservice
           environment:
-            environmentRef: Env_1
+            environmentRef: k0sharness
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: Infra_1
+              - identifier: K8sEnv
           execution:
             steps:
               - step:
