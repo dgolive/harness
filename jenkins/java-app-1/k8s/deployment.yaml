@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: java-app-1  
-        image: java-app-1:latest
+        image: trial5d3qns.jfrog.io/harness-vrepo/java-app-1:49
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
