@@ -267,6 +267,7 @@ pipeline:
     - stage:
         name: Deploy to Kubernetes
         identifier: deploy_to_kubernetes
+        cloneCodebase: true
         type: Deployment
         failureStrategies:
           - onFailure:
@@ -276,7 +277,6 @@ pipeline:
                 type: StageRollback
         spec:
           deploymentType: Kubernetes
-          cloneCodebase: true
           service:
             serviceRef: k8s_harnessservice
           environment:
@@ -290,7 +290,6 @@ pipeline:
                   identifier: echo_deployment_message
                   name: Echo Deployment Message
                   type: ShellScript
-                  cloneCodebase: true
                   spec:
                     shell: Bash
                     source:
@@ -311,6 +310,7 @@ pipeline:
                   name: Apply Kubernetes Manifests
                   type: K8sApply
                   spec:
+                    cloneCodebase: true
                     filePaths:
                       - jenkins/java-app-1/k8s/deployment.yaml
                       - jenkins/java-app-1/k8s/service.yaml
