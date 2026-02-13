@@ -15,9 +15,11 @@ spec:
       labels:
         app: java-app-1
     spec:
+      imagePullSecrets:
+        - name: artifactory-registry-secret
       containers:
       - name: java-app-1  
-        image: trial5d3qns.jfrog.io/harness-vrepo/java-app-1:49
+        image: trial5d3qns.jfrog.io/harness-vrepo/java-app-1:<+pipeline.sequenceId>
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
