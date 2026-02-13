@@ -4,5 +4,23 @@ service:
   orgIdentifier: default
   projectIdentifier: harnesstest1
   serviceDefinition:
-    spec: {}
     type: Kubernetes
+    spec:
+      manifests:
+        - manifest:
+            identifier: java-app-1-k8s
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: hngcharness
+                  gitFetchType: Branch
+                  repoName: gh-my-harness
+                  branch: main
+                  paths:
+                    - jenkins/java-app-1/k8s/deployment.yaml
+                    - jenkins/java-app-1/k8s/service.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+  gitOpsEnabled: false
