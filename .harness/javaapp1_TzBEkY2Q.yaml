@@ -290,6 +290,7 @@ pipeline:
                   identifier: echo_deployment_message
                   name: Echo Deployment Message
                   type: ShellScript
+                  cloneCodebase: true
                   spec:
                     shell: Bash
                     source:
@@ -348,12 +349,12 @@ pipeline:
             spec: {}
           deploymentType: Kubernetes
           service:
-            serviceRef: javaservice
+            serviceRef: k8s_harnessservice
           environment:
-            environmentRef: Env_1
+            environmentRef: k0sharness
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: Infra_1
+              - identifier: K8sInfra
           execution:
             steps:
               - step:
