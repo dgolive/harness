@@ -5,7 +5,6 @@ metadata:
   namespace: java-app-1
   labels:
     app: java-app-1
-    build: "<+pipeline.sequenceId>"
 spec:
   replicas: 2
   selector:
@@ -15,21 +14,18 @@ spec:
     metadata:
       labels:
         app: java-app-1
-        build: "<+pipeline.sequenceId>"
     spec:
       imagePullSecrets:
         - name: artifactory-registry-secret
       containers:
       - name: java-app-1  
-        image: trial5d3qns.jfrog.io/harness-vrepo/java-app-1:<+pipeline.sequenceId>
+        image: trial5d3qns.jfrog.io/harness-vrepo/java-app-1:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: "production"
-        - name: BUILD_NUMBER
-          value: "<+pipeline.sequenceId>"
         resources:
           requests:
             memory: "256Mi"
