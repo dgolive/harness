@@ -260,32 +260,9 @@ pipeline:
                     repo: trial5d3qns.jfrog.io/harness-vrepo/java-app-1
                     tags:
                       - <+pipeline.sequenceId>
+                      - latest
                     dockerfile: jenkins/java-app-1/Dockerfile
-                    buildContext: jenkins/java-app-1
                   timeout: 10m
-              - step:
-                  type: Run
-                  name: Tag image as latest
-                  identifier: tag_image_as_latest
-                  spec:
-                    connectorRef: harnessk8sconnector
-                    image: quay.io/skopeo/stable
-                    shell: Sh
-                    command: |
-                      IMAGE_BASE="trial5d3qns.jfrog.io/harness-vrepo/java-app-1"
-                      SOURCE="${IMAGE_BASE}:<+pipeline.sequenceId>"
-                      DEST="${IMAGE_BASE}:latest"
-                      echo "Tagging ${SOURCE} as ${DEST}"
-                      skopeo copy \
-                        --src-creds="$${ARTIFACTORY_USER}:$${ARTIFACTORY_PASSWORD}" \
-                        --dest-creds="$${ARTIFACTORY_USER}:$${ARTIFACTORY_PASSWORD}" \
-                        "docker://${SOURCE}" "docker://${DEST}"
-                      echo "Tagged image as latest"
-                    envVariables:
-                      ARTIFACTORY_USER: <+secrets.getValue("account.artifactory_username")>
-                      ARTIFACTORY_PASSWORD: <+secrets.getValue("account.artifactory_password")>
-                  timeout: 10m
-            rollbackSteps: []
     - stage:
         name: Deploy to Kubernetes
         identifier: deploy_to_kubernetes
