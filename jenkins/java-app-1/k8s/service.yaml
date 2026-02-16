@@ -5,6 +5,7 @@ metadata:
   namespace: java-app-1
   labels:
     app: java-app-1
+    build: "<+pipeline.sequenceId>"
 spec:
   type: ClusterIP
   ports:
