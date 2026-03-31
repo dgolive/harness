@@ -236,5 +236,5 @@ pipeline:
               action:
                 type: Abort
   delegateSelectors:
-    - ceg-eks-delegate
+    - helm-delegate
   allowStageExecutions: true
