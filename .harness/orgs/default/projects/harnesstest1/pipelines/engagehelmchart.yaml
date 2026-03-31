@@ -7,9 +7,12 @@ pipeline:
   properties:
     ci:
       codebase:
-        connectorRef: org.org_ghec_con
+        connectorRef: hngcharness
         repoName: postech-engage-helm-chart
-        build: <+input>
+        build:
+          type: branch
+          spec:
+            branch: main
   stages:
     - stage:
         name: Initialize Variables
@@ -20,8 +23,8 @@ pipeline:
           infrastructure:
             type: KubernetesDirect
             spec:
-              connectorRef: cegconnector
-              namespace: harness-delegate-ng
+              connectorRef: harnessk8sconnector
+              namespace: harness-runners
               annotations:
                 sidecar.istio.io/inject: "false"
               automountServiceAccountToken: true
