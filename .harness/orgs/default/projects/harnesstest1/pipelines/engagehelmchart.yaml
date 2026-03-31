@@ -1,0 +1,237 @@
+pipeline:
+  name: engage-helm-chart
+  identifier: engagehelmchart
+  projectIdentifier: harnesstest1
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: org.org_ghec_con
+        repoName: postech-engage-helm-chart
+        build: <+input>
+  stages:
+    - stage:
+        name: Initialize Variables
+        identifier: initialize_variables
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: cegconnector
+              namespace: harness-delegate-ng
+              annotations:
+                sidecar.istio.io/inject: "false"
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: compute_chart_version
+                  identifier: compute_chart_version
+                  spec:
+                    connectorRef: cegconnector
+                    image: <+pipeline.variables.ci_image>
+                    shell: Bash
+                    command: |
+                      set -e
+                      CHART_DIR="<+pipeline.variables.chart_dir>"
+                      BUILD_NUM="<+pipeline.sequenceId>"
+
+                      chartName=$(grep -E '^name:' "$CHART_DIR/Chart.yaml" | head -1 | awk '{print $2}')
+                      chartVer=$(grep -E '^version:' "$CHART_DIR/Chart.yaml" | head -1 | awk '{print $2}')
+
+                      BRANCH_NAME="<+codebase.branch>"
+                      SOURCE_BRANCH="<+codebase.sourceBranch>"
+                      if [ -z "$SOURCE_BRANCH" ] || [ "$SOURCE_BRANCH" = "null" ]; then
+                        CHANGE_BRANCH="$BRANCH_NAME"
+                      else
+                        CHANGE_BRANCH="$SOURCE_BRANCH"
+                      fi
+
+                      if [ "$BRANCH_NAME" = "master" ]; then
+                        version="${chartVer}-master.${BUILD_NUM}"
+                      else
+                        version="${chartVer}-${CHANGE_BRANCH}.${BUILD_NUM}"
+                      fi
+                      version=$(echo "$version" | tr '_' '-')
+
+                      oci_repo="<+pipeline.variables.oci_repository>"
+                      gcs_repo="<+pipeline.variables.gcs_repo_name>"
+
+                      CI_VARS="$PWD/ci_vars.sh"
+                      {
+                        echo "export CHART_NAME=$chartName"
+                        echo "export CHART_VERSION_RAW=$chartVer"
+                        echo "export VERSION=$version"
+                        echo "export REPOSITORY=$oci_repo"
+                        echo "export REPO_GCS=$gcs_repo"
+                        echo "export BRANCH_NAME=$BRANCH_NAME"
+                        echo "export CHANGE_BRANCH=$CHANGE_BRANCH"
+                      } > "$CI_VARS"
+
+                      echo "CHART_NAME=$chartName VERSION=$version (vars: $CI_VARS)"
+                    timeout: 5m
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: Abort
+    - stage:
+        name: Log Deploy Details
+        identifier: log_deploy_details
+        type: CI
+        spec:
+          cloneCodebase: false
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: cegconnector
+              namespace: harness-delegate-ng
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: log_build_metadata
+                  identifier: log_build_metadata
+                  spec:
+                    connectorRef: cegconnector
+                    image: <+pipeline.variables.ci_image>
+                    shell: Bash
+                    command: |
+                      set -e
+                      . "$PWD/ci_vars.sh"
+                      TITLE="<+pipeline.variables.change_title>"
+                      echo "Build display label: Build: ${VERSION}"
+                      echo "Description / change title: ${TITLE:-n/a}"
+                      echo "Branch: ${BRANCH_NAME} CHANGE_BRANCH (GCS path): ${CHANGE_BRANCH}"
+                    timeout: 2m
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: Abort
+    - stage:
+        name: Lint Helm Chart and debug
+        identifier: lint_helm_chart
+        type: CI
+        spec:
+          cloneCodebase: false
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: cegconnector
+              namespace: harness-delegate-ng
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: helm_lint_template
+                  identifier: helm_lint_template
+                  spec:
+                    connectorRef: cegconnector
+                    image: <+pipeline.variables.ci_image>
+                    shell: Bash
+                    command: |
+                      set -e
+                      . "$PWD/ci_vars.sh"
+                      CHART_DIR="<+pipeline.variables.chart_dir>"
+                      echo "linting helm chart [${CHART_NAME}]..."
+                      helm lint "./${CHART_DIR}"
+                      helm template --debug "./${CHART_DIR}"
+                    timeout: 15m
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: Abort
+    - stage:
+        name: Pack and Upload Helm Chart to AR
+        identifier: pack_upload_helm
+        type: CI
+        spec:
+          cloneCodebase: false
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: cegconnector
+              namespace: harness-delegate-ng
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: helm_pack_gcs_oci
+                  identifier: helm_pack_gcs_oci
+                  spec:
+                    connectorRef: cegconnector
+                    image: <+pipeline.variables.ci_image>
+                    shell: Bash
+                    command: |
+                      set -e
+                      . "$PWD/ci_vars.sh"
+                      CHART_DIR="<+pipeline.variables.chart_dir>"
+
+                      # Install Helm 3 if missing (no sudo; user-local bin)
+                      if ! command -v helm >/dev/null 2>&1; then
+                        echo "Installing Helm 3..."
+                        curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+                        chmod 700 /tmp/get_helm.sh
+                        mkdir -p "$HOME/bin"
+                        export USE_SUDO="false"
+                        export HELM_INSTALL_DIR="$HOME/bin"
+                        export PATH="$HELM_INSTALL_DIR:$PATH"
+                        DESIRED_VERSION=v3.14.4 bash /tmp/get_helm.sh
+                      fi
+
+                      echo "Installing helm-gcs plugin if needed..."
+                      helm plugin list | grep -q gcs || helm plugin install https://github.com/hayorov/helm-gcs.git --version 0.4.1
+
+                      export GOOGLE_APPLICATION_CREDENTIALS="/tmp/sa-helm-gcs.json"
+                      printf '%s' "<+secrets.getValue(<+pipeline.variables.secret_helm_gcs_sa>)>" > "$GOOGLE_APPLICATION_CREDENTIALS"
+
+                      echo "Adding helm GCS repo ${REPO_GCS}..."
+                      helm repo add "${REPO_GCS}" "gs://${REPO_GCS}/charts" || true
+                      helm repo update
+
+                      echo "packaging helm chart [${CHART_NAME}] version [${VERSION}]..."
+                      helm package "$CHART_DIR" --version "${VERSION}"
+
+                      echo "pushing to GCS helm repo bucketPath=${CHANGE_BRANCH}..."
+                      helm gcs push "${CHART_NAME}-${VERSION}.tgz" "${REPO_GCS}" --bucketPath="${CHANGE_BRANCH}" --retry
+
+                      echo "artifact registry authentication (OCI)"
+                      export KEY="/tmp/sa-artifacts.json"
+                      printf '%s' "<+secrets.getValue(<+pipeline.variables.secret_artifacts_sa>)>" > "$KEY"
+                      gcloud auth activate-service-account --key-file="$KEY"
+                      gcloud auth configure-docker us-docker.pkg.dev --quiet
+
+                      echo "helm push OCI ${REPOSITORY}/${CHART_NAME}..."
+                      helm push "${CHART_NAME}-${VERSION}.tgz" "oci://${REPOSITORY}/${CHART_NAME}"
+
+                      rm -f "$GOOGLE_APPLICATION_CREDENTIALS" "$KEY" || true
+                    timeout: 30m
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: Abort
+  delegateSelectors:
+    - ceg-eks-delegate
+  allowStageExecutions: true
