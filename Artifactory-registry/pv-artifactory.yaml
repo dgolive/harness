@@ -1,0 +1,36 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: artifactory-pv
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: artifactory-pv
+  namespace: artifactory
+spec:
+  storageClassName: artifactory-pv
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 20Gi
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/artifactory-registry/
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: artifactory-postgresql-pv
+  namespace: artifactory
+spec:
+  storageClassName: artifactory-pv
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 200Gi
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/artifactory-postgresql/

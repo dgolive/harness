@@ -1,0 +1,15 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-jenkins
+  namespace: istio-ingress
+spec:
+  gatewayClassName: istio
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: All
+    hostname: '*.harness-lab.net'
+    name: default
+    port: 80
+    protocol: HTTP
